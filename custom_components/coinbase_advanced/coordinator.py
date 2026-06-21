@@ -20,6 +20,7 @@ from .api import (
 )
 from .const import (
     CONF_EXCHANGE_BASE,
+    CONF_INCLUDE_PORTFOLIO_BREAKDOWN,
     CONF_INCLUDE_TRANSACTION_SUMMARY,
     CONF_POLL_INTERVAL,
     CONF_PRODUCTS,
@@ -74,6 +75,9 @@ class CoinbaseAdvancedCoordinator(DataUpdateCoordinator[CoinbaseSnapshot]):
         include_transaction_summary = bool(
             self.config_entry.options.get(CONF_INCLUDE_TRANSACTION_SUMMARY, False)
         )
+        include_portfolio_breakdown = bool(
+            self.config_entry.options.get(CONF_INCLUDE_PORTFOLIO_BREAKDOWN, True)
+        )
 
         try:
             return await self.hass.async_add_executor_job(
@@ -82,6 +86,7 @@ class CoinbaseAdvancedCoordinator(DataUpdateCoordinator[CoinbaseSnapshot]):
                     exchange_base=exchange_base,
                     include_exchange_rates=True,
                     include_transaction_summary=include_transaction_summary,
+                    include_portfolio_breakdown=include_portfolio_breakdown,
                 )
             )
         except CoinbaseAdvancedAuthError as error:

@@ -5,6 +5,8 @@ from __future__ import annotations
 import importlib.util
 import inspect
 import json
+import hashlib
+import struct
 from pathlib import Path
 import sys
 import types
@@ -132,6 +134,20 @@ class PackagingTests(unittest.TestCase):
 class BrandAssetTests(unittest.TestCase):
     """Brand asset placement tests."""
 
+    BRAND_ASSETS = [
+        ROOT / "brand" / "icon.png",
+        ROOT / "brand" / "logo.png",
+        INTEGRATION / "brand" / "icon.png",
+        INTEGRATION / "brand" / "logo.png",
+    ]
+
+    def _png_dimensions(self, path: Path) -> tuple[int, int]:
+        """Read PNG dimensions from the IHDR chunk."""
+        data = path.read_bytes()
+        self.assertTrue(data.startswith(b"\x89PNG\r\n\x1a\n"), f"{path} is not PNG")
+        self.assertEqual(data[12:16], b"IHDR")
+        return struct.unpack(">II", data[16:24])
+
     def test_brand_assets_exist_for_home_assistant_and_hacs(self) -> None:
         """Expose icons for HA local brands and HACS repository cards."""
         repo_brand = ROOT / "brand"
@@ -140,6 +156,31 @@ class BrandAssetTests(unittest.TestCase):
         for directory in (repo_brand, integration_brand):
             self.assertGreater((directory / "icon.png").stat().st_size, 0)
             self.assertGreater((directory / "logo.png").stat().st_size, 0)
+
+    def test_logo_uses_the_selected_brand_icon(self) -> None:
+        """Keep logo and icon aligned with the selected project brand asset."""
+        pairs = [
+            (ROOT / "brand" / "icon.png", ROOT / "brand" / "logo.png"),
+            (INTEGRATION / "brand" / "icon.png", INTEGRATION / "brand" / "logo.png"),
+        ]
+
+        for icon, logo in pairs:
+            self.assertEqual(logo.read_bytes(), icon.read_bytes())
+
+    def test_brand_assets_use_normal_home_assistant_brand_size(self) -> None:
+        """Normal Home Assistant brand images should be 256x256 pixels."""
+        for asset in self.BRAND_ASSETS:
+            self.assertEqual(self._png_dimensions(asset), (256, 256))
+
+    def test_brand_assets_do_not_use_retired_coinbase_like_icon(self) -> None:
+        """Avoid shipping the retired Coinbase-like brand concept."""
+        retired_hashes = {
+            "5b1821457d40873aa5ae3a5477baabf019b13edd6ce0d0d752522f7a5fc4d04b",
+        }
+
+        for asset in self.BRAND_ASSETS:
+            digest = hashlib.sha256(asset.read_bytes()).hexdigest()
+            self.assertNotIn(digest, retired_hashes)
 
 
 class TranslationTests(unittest.TestCase):
@@ -249,6 +290,174 @@ class DepotValueTests(unittest.TestCase):
         value = api_module.portfolio_value_in_base(accounts, exchange_rates)
 
         self.assertEqual(value, 30125.0)
+
+    def test_portfolio_value_prefers_portfolio_breakdown_total(self) -> None:
+        """Portfolio breakdown totals include staked funds Coinbase omits from accounts."""
+        api_module = _load_module("api")
+        accounts = [
+            {
+                "uuid": "eth2",
+                "currency": "ETH2",
+                "available_balance": {"value": "0"},
+                "hold": {"value": "0"},
+            }
+        ]
+        exchange_rates = {"currency": "USD", "rates": {"ETH": "0.0005"}}
+        portfolio_breakdowns = [
+            {
+                "portfolio_balances": {
+                    "total_balance": {
+                        "value": "2230.5707565044240001988718",
+                        "currency": "USD",
+                    }
+                }
+            }
+        ]
+
+        value = api_module.portfolio_value_in_base(
+            accounts,
+            exchange_rates,
+            portfolio_breakdowns,
+        )
+
+        self.assertEqual(value, 2230.5707565)
+
+    def test_portfolio_spot_positions_expose_staked_eth(self) -> None:
+        """Staked ETH appears as a portfolio spot position, not an account balance."""
+        api_module = _load_module("api")
+        portfolio_breakdowns = [
+            {
+                "spot_positions": [
+                    {
+                        "asset": "ETH",
+                        "account_uuid": "staked-eth",
+                        "total_balance_crypto": 0.78930014,
+                        "total_balance_fiat": 1366.8666,
+                        "account_type": "ACCOUNT_TYPE_STAKED_FUNDS",
+                    }
+                ]
+            }
+        ]
+
+        positions = api_module.portfolio_spot_positions(portfolio_breakdowns)
+
+        self.assertEqual(len(positions), 1)
+        self.assertEqual(api_module.position_asset(positions[0]), "ETH")
+        self.assertEqual(api_module.position_balance(positions[0]), 0.78930014)
+        self.assertEqual(
+            api_module.position_account_type(positions[0]),
+            "ACCOUNT_TYPE_STAKED_FUNDS",
+        )
+
+    def test_portfolio_breakdown_values_expose_sensor_data(self) -> None:
+        """Portfolio breakdowns expose totals and rich position metadata."""
+        api_module = _load_module("api")
+        portfolio_breakdowns = [
+            {
+                "portfolio_balances": {
+                    "total_crypto_balance": {
+                        "value": "2229.7884403387339033024",
+                        "currency": "USD",
+                    },
+                    "total_cash_equivalent_balance": {
+                        "value": "0.7823161656900968964718",
+                        "currency": "USD",
+                    },
+                },
+                "spot_positions": [
+                    {
+                        "asset": "ETH",
+                        "account_uuid": "staked-eth",
+                        "total_balance_crypto": "0.78930014",
+                        "total_balance_fiat": "1366.86662404",
+                        "allocation": "0.61278784",
+                        "cost_basis": {
+                            "value": "2189.98343163",
+                            "currency": "USD",
+                        },
+                        "average_entry_price": {
+                            "value": "2774.58873274",
+                            "currency": "USD",
+                        },
+                        "unrealized_pnl": " -823.11680759 ",
+                        "available_to_trade_crypto": "0",
+                        "available_to_transfer_crypto": "0",
+                        "available_to_send_crypto": "0",
+                        "account_type": "ACCOUNT_TYPE_STAKED_FUNDS",
+                    }
+                ],
+            }
+        ]
+
+        positions = api_module.portfolio_spot_positions(portfolio_breakdowns)
+        position = positions[0]
+
+        self.assertEqual(
+            api_module.portfolio_balance_value(
+                portfolio_breakdowns,
+                "total_crypto_balance",
+            ),
+            2229.78844034,
+        )
+        self.assertEqual(
+            api_module.portfolio_balance_value(
+                portfolio_breakdowns,
+                "total_cash_equivalent_balance",
+            ),
+            0.78231617,
+        )
+        self.assertEqual(
+            api_module.portfolio_balance_currency(
+                portfolio_breakdowns,
+                "total_crypto_balance",
+            ),
+            "USD",
+        )
+        self.assertEqual(api_module.position_fiat_value(position), 1366.86662404)
+        self.assertEqual(api_module.position_allocation(position), 0.61278784)
+        self.assertEqual(api_module.position_cost_basis(position), 2189.98343163)
+        self.assertEqual(
+            api_module.position_average_entry_price(position),
+            2774.58873274,
+        )
+        self.assertEqual(api_module.position_unrealized_pnl(position), -823.11680759)
+        self.assertEqual(api_module.position_available_to_trade(position), 0.0)
+        self.assertEqual(api_module.position_available_to_transfer(position), 0.0)
+        self.assertEqual(api_module.position_available_to_send(position), 0.0)
+
+    def test_fetch_snapshot_can_skip_portfolio_breakdowns(self) -> None:
+        """The portfolio breakdown request can be disabled from options."""
+        api_module = _load_module("api")
+
+        class FakeApi(api_module.CoinbaseAdvancedApi):
+            def __init__(self) -> None:
+                self.breakdown_calls = 0
+
+            def fetch_portfolios(self) -> list[dict[str, str]]:
+                return [{"uuid": "portfolio-1"}]
+
+            def fetch_portfolio_breakdowns(self, portfolios):
+                self.breakdown_calls += 1
+                return [{"portfolio_balances": {}}]
+
+            def fetch_accounts(self) -> list[dict[str, str]]:
+                return []
+
+            def fetch_products(self, product_ids):
+                return {}
+
+            def fetch_exchange_rates(self, currency="USD"):
+                return {"currency": currency, "rates": {}}
+
+            def fetch_transaction_summary(self):
+                return None
+
+        api = FakeApi()
+
+        snapshot = api.fetch_snapshot(include_portfolio_breakdown=False)
+
+        self.assertEqual(snapshot.portfolio_breakdowns, [])
+        self.assertEqual(api.breakdown_calls, 0)
 
 
 if __name__ == "__main__":

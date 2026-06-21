@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.4.0-rc7
+
+- Replaced the Coinbase-like brand concept with the neutral Portfolio Pulse brand icon scaled from `ha_coinbase.png`.
+- Use the selected brand icon for both `icon.png` and `logo.png` in the repository and integration brand assets.
+- Fetch Coinbase portfolio breakdowns and use their total value for the depot value sensor when available.
+- Add optional Coinbase portfolio breakdown polling, enabled by default.
+- Add portfolio breakdown value sensors for total, crypto, cash, and non-zero futures/equities/PnL values.
+- Add portfolio position balance sensors for non-wallet positions such as staked ETH.
+- Add richer portfolio position attributes for fiat value, allocation, cost basis, average entry price, unrealized PnL, and available trade/transfer/send amounts.
+
 ## 0.4.0-rc6
 
 - Fixed config flow loading by removing an unserializable `str.strip` callable from the Home Assistant form schema.

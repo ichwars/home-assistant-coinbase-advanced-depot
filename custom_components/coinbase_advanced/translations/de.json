@@ -56,6 +56,7 @@
           "exchange_rate_currencies": "Wechselkurs-Sensoren: Zielwährungen, z. B. EUR, BTC, ETH.",
           "exchange_base": "Quote-/Basiswährung für Preise und Wechselkurse, z. B. USD oder EUR.",
           "poll_interval": "Abrufintervall in Sekunden, mindestens 30.",
+          "include_portfolio_breakdown": "Coinbase-Portfolio-Breakdown-Sensoren inklusive gestakter Werte einbeziehen.",
           "include_transaction_summary": "Transaktionsübersicht abrufen, falls dein API-Key die Berechtigung hat."
         },
         "description": "Coinbase-Advanced-Depot-Sensoren und Read-only-API-Zugriff konfigurieren. Wallet-Balances sind Assets wie ETH. Produktpreise sind Handelspaare wie ETH-USD.",

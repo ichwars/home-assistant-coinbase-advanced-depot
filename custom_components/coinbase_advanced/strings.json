@@ -56,6 +56,7 @@
           "exchange_rate_currencies": "Exchange-rate sensors: target currencies, e.g. EUR, BTC, ETH.",
           "exchange_base": "Quote/base currency for prices and exchange rates, e.g. USD or EUR.",
           "poll_interval": "Polling interval in seconds, minimum 30.",
+          "include_portfolio_breakdown": "Include Coinbase portfolio breakdown sensors, including staked funds.",
           "include_transaction_summary": "Fetch transaction summary if your API key has permission."
         },
         "description": "Configure Coinbase Advanced depot sensors and read-only API access. Wallet balances are assets such as ETH. Product prices are market pairs such as ETH-USD.",

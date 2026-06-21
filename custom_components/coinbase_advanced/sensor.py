@@ -23,13 +23,47 @@ from .api import (
     account_id,
     account_is_vault,
     account_name,
+    portfolio_balance_currency,
+    portfolio_balance_value,
+    portfolio_spot_positions,
     portfolio_value_in_base,
+    position_account_id,
+    position_account_type,
+    position_allocation,
+    position_asset,
+    position_average_entry_price,
+    position_available_to_send,
+    position_available_to_trade,
+    position_available_to_transfer,
+    position_balance,
+    position_cost_basis,
+    position_fiat_value,
+    position_unrealized_pnl,
 )
 from .const import (
+    API_ACCOUNT_TYPE,
+    API_ACCOUNT_TYPE_STAKED_FUNDS,
+    API_ACCOUNT_TYPE_WALLET,
+    API_ALLOCATION,
+    API_AVAILABLE_TO_SEND_CRYPTO,
+    API_AVAILABLE_TO_TRADE_CRYPTO,
+    API_AVAILABLE_TO_TRANSFER_CRYPTO,
+    API_AVERAGE_ENTRY_PRICE,
     API_AVAILABLE_BALANCE,
+    API_COST_BASIS,
     API_CURRENCY,
+    API_FUTURES_UNREALIZED_PNL,
     API_HOLD,
+    API_PERP_UNREALIZED_PNL,
     API_RATES,
+    API_TOTAL_BALANCE,
+    API_TOTAL_BALANCE_CRYPTO,
+    API_TOTAL_BALANCE_FIAT,
+    API_TOTAL_CASH_EQUIVALENT_BALANCE,
+    API_TOTAL_CRYPTO_BALANCE,
+    API_TOTAL_EQUITIES_BALANCE,
+    API_TOTAL_FUTURES_BALANCE,
+    API_UNREALIZED_PNL,
     API_VALUE,
     CONF_ACCOUNT_CURRENCIES,
     CONF_EXCHANGE_BASE,
@@ -51,6 +85,8 @@ ATTR_BASE_CURRENCY = "base_currency"
 ATTR_QUOTE_CURRENCY = "quote_currency"
 ATTR_STATUS = "status"
 ATTR_ACCOUNT_COUNT = "account_count"
+ATTR_POSITION_COUNT = "position_count"
+ATTR_BALANCE_KEY = "balance_key"
 
 PARALLEL_UPDATES = 0
 
@@ -62,6 +98,31 @@ CURRENCY_ICONS = {
     "USD": "mdi:currency-usd",
 }
 DEFAULT_COIN_ICON = "mdi:cash"
+
+PORTFOLIO_BALANCE_SENSORS: tuple[tuple[str, str, str, bool], ...] = (
+    (API_TOTAL_BALANCE, "Portfolio total value", "total-value", True),
+    (API_TOTAL_CRYPTO_BALANCE, "Portfolio crypto value", "crypto-value", True),
+    (
+        API_TOTAL_CASH_EQUIVALENT_BALANCE,
+        "Portfolio cash value",
+        "cash-value",
+        True,
+    ),
+    (API_TOTAL_FUTURES_BALANCE, "Portfolio futures value", "futures-value", False),
+    (API_TOTAL_EQUITIES_BALANCE, "Portfolio equities value", "equities-value", False),
+    (
+        API_FUTURES_UNREALIZED_PNL,
+        "Portfolio futures unrealized PnL",
+        "futures-unrealized-pnl",
+        False,
+    ),
+    (
+        API_PERP_UNREALIZED_PNL,
+        "Portfolio perpetual unrealized PnL",
+        "perp-unrealized-pnl",
+        False,
+    ),
+)
 
 
 async def async_setup_entry(
@@ -104,6 +165,23 @@ async def async_setup_entry(
 
     add_entity(DepotValueSensor(coordinator, config_entry.entry_id, exchange_base))
 
+    if data.portfolio_breakdowns:
+        for balance_key, name, unique_suffix, include_zero in PORTFOLIO_BALANCE_SENSORS:
+            value = portfolio_balance_value(data.portfolio_breakdowns, balance_key)
+            if value is None or (not include_zero and value == 0):
+                continue
+            add_entity(
+                PortfolioBalanceSensor(
+                    coordinator,
+                    config_entry.entry_id,
+                    balance_key,
+                    name,
+                    unique_suffix,
+                    exchange_base,
+                )
+            )
+
+    account_ids = {account_id(account) for account in data.accounts}
     for account in data.accounts:
         currency = account_currency(account)
         if account_is_vault(account):
@@ -114,6 +192,21 @@ async def async_setup_entry(
         elif not include_zero_balances and account_balance(account) <= 0:
             continue
         add_entity(AccountBalanceSensor(coordinator, config_entry.entry_id, account))
+
+    for position in portfolio_spot_positions(data.portfolio_breakdowns):
+        asset = position_asset(position)
+        position_id = position_account_id(position)
+        if (
+            position_account_type(position) == API_ACCOUNT_TYPE_WALLET
+            and position_id in account_ids
+        ):
+            continue
+        if selected_account_currencies:
+            if asset not in selected_account_currencies:
+                continue
+        elif not include_zero_balances and position_balance(position) <= 0:
+            continue
+        add_entity(PortfolioPositionSensor(coordinator, config_entry.entry_id, position))
 
     for product_id in selected_products:
         if product_id in data.products:
@@ -250,6 +343,7 @@ class DepotValueSensor(CoinbaseAdvancedBaseEntity):
         value = portfolio_value_in_base(
             self.snapshot.accounts,
             self.snapshot.exchange_rates,
+            self.snapshot.portfolio_breakdowns,
         )
         return round(value, 2) if value is not None else None
 
@@ -260,6 +354,65 @@ class DepotValueSensor(CoinbaseAdvancedBaseEntity):
             ATTR_BASE_CURRENCY: self._exchange_base,
             ATTR_ACCOUNT_COUNT: sum(
                 1 for account in self.snapshot.accounts if not account_is_vault(account)
+            ),
+            ATTR_POSITION_COUNT: len(
+                portfolio_spot_positions(self.snapshot.portfolio_breakdowns)
+            ),
+        }
+
+
+class PortfolioBalanceSensor(CoinbaseAdvancedBaseEntity):
+    """Portfolio breakdown monetary balance sensor."""
+
+    _attr_device_class = SensorDeviceClass.MONETARY
+    _attr_state_class = SensorStateClass.MEASUREMENT
+    _attr_suggested_display_precision = 2
+
+    def __init__(
+        self,
+        coordinator: CoinbaseAdvancedCoordinator,
+        entry_id: str,
+        balance_key: str,
+        name: str,
+        unique_suffix: str,
+        fallback_currency: str,
+    ) -> None:
+        """Initialize portfolio breakdown balance sensor."""
+        super().__init__(coordinator, entry_id)
+        self._balance_key = balance_key
+        self._fallback_currency = fallback_currency
+        self._attr_name = name
+        self._attr_unique_id = f"{DOMAIN}-{entry_id}-portfolio-{unique_suffix}"
+        self._attr_icon = CURRENCY_ICONS.get(fallback_currency, DEFAULT_COIN_ICON)
+
+    @property
+    def native_value(self) -> float | None:
+        """Return the current portfolio balance value."""
+        value = portfolio_balance_value(
+            self.snapshot.portfolio_breakdowns,
+            self._balance_key,
+        )
+        return round(value, 2) if value is not None else None
+
+    @property
+    def native_unit_of_measurement(self) -> str | None:
+        """Return the currency reported by Coinbase for this balance."""
+        return (
+            portfolio_balance_currency(
+                self.snapshot.portfolio_breakdowns,
+                self._balance_key,
+            )
+            or self._fallback_currency
+        )
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        """Return portfolio balance metadata."""
+        return {
+            ATTR_BALANCE_KEY: self._balance_key,
+            API_CURRENCY: self.native_unit_of_measurement,
+            ATTR_POSITION_COUNT: len(
+                portfolio_spot_positions(self.snapshot.portfolio_breakdowns)
             ),
         }
 
@@ -321,6 +474,70 @@ class AccountBalanceSensor(CoinbaseAdvancedBaseEntity):
             attrs[ATTR_BASE_CURRENCY] = exchange_rates.get(API_CURRENCY)
 
         return attrs
+
+
+class PortfolioPositionSensor(CoinbaseAdvancedBaseEntity):
+    """Portfolio spot position balance sensor."""
+
+    _attr_state_class = SensorStateClass.TOTAL
+
+    def __init__(
+        self,
+        coordinator: CoinbaseAdvancedCoordinator,
+        entry_id: str,
+        position: Mapping[str, Any],
+    ) -> None:
+        """Initialize portfolio position balance sensor."""
+        super().__init__(coordinator, entry_id)
+        self._position_id = position_account_id(position)
+        self._asset = position_asset(position)
+        self._account_type = position_account_type(position)
+        label = (
+            "staked"
+            if self._account_type == API_ACCOUNT_TYPE_STAKED_FUNDS
+            else "position"
+        )
+        self._attr_name = f"{self._asset} {label} balance"
+        self._attr_unique_id = f"{DOMAIN}-{entry_id}-position-{self._position_id}"
+        self._attr_native_unit_of_measurement = self._asset
+        self._attr_icon = CURRENCY_ICONS.get(self._asset, DEFAULT_COIN_ICON)
+
+    def _current_position(self) -> Mapping[str, Any] | None:
+        """Return the current position payload."""
+        for position in portfolio_spot_positions(self.snapshot.portfolio_breakdowns):
+            if position_account_id(position) == self._position_id:
+                return position
+        return None
+
+    @property
+    def native_value(self) -> float | None:
+        """Return current portfolio position balance."""
+        position = self._current_position()
+        if position is None:
+            return None
+        return position_balance(position)
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        """Return position metadata."""
+        position = self._current_position()
+        if position is None:
+            return {ATTR_ACCOUNT_ID: self._position_id}
+
+        return {
+            ATTR_ACCOUNT_ID: self._position_id,
+            API_CURRENCY: self._asset,
+            API_ACCOUNT_TYPE: self._account_type,
+            API_TOTAL_BALANCE_CRYPTO: position_balance(position),
+            API_TOTAL_BALANCE_FIAT: position_fiat_value(position),
+            API_ALLOCATION: position_allocation(position),
+            API_COST_BASIS: position_cost_basis(position),
+            API_AVERAGE_ENTRY_PRICE: position_average_entry_price(position),
+            API_UNREALIZED_PNL: position_unrealized_pnl(position),
+            API_AVAILABLE_TO_TRADE_CRYPTO: position_available_to_trade(position),
+            API_AVAILABLE_TO_TRANSFER_CRYPTO: position_available_to_transfer(position),
+            API_AVAILABLE_TO_SEND_CRYPTO: position_available_to_send(position),
+        }
 
 
 class ProductPriceSensor(CoinbaseAdvancedBaseEntity):

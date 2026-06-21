@@ -25,12 +25,15 @@ from .api import (
     CoinbaseAdvancedConnectionError,
     account_currency,
     account_is_vault,
+    portfolio_spot_positions,
+    position_asset,
 )
 from .const import (
     API_RATES,
     CONF_ACCOUNT_CURRENCIES,
     CONF_EXCHANGE_BASE,
     CONF_EXCHANGE_RATE_CURRENCIES,
+    CONF_INCLUDE_PORTFOLIO_BREAKDOWN,
     CONF_INCLUDE_TRANSACTION_SUMMARY,
     CONF_INCLUDE_ZERO_BALANCES,
     CONF_POLL_INTERVAL,
@@ -184,14 +187,25 @@ def _validate_options_sync(config_entry, options: dict[str, Any]) -> None:
     selected_products: list[str] = options.get(CONF_PRODUCTS, [])
     selected_exchange_rates: list[str] = options.get(CONF_EXCHANGE_RATE_CURRENCIES, [])
     exchange_base: str = options.get(CONF_EXCHANGE_BASE, DEFAULT_EXCHANGE_BASE)
+    include_portfolio_breakdown = bool(
+        options.get(CONF_INCLUDE_PORTFOLIO_BREAKDOWN, True)
+    )
 
     if selected_account_currencies:
+        portfolio_breakdowns = []
+        if include_portfolio_breakdown:
+            portfolios = api.fetch_portfolios()
+            portfolio_breakdowns = api.fetch_portfolio_breakdowns(portfolios)
         accounts = api.fetch_accounts()
         account_currencies = {
             account_currency(account)
             for account in accounts
             if not account_is_vault(account)
         }
+        account_currencies.update(
+            position_asset(position)
+            for position in portfolio_spot_positions(portfolio_breakdowns)
+        )
         if not set(selected_account_currencies).issubset(account_currencies):
             raise CurrencyUnavailable
 
@@ -298,6 +312,7 @@ class CoinbaseAdvancedConfigFlow(ConfigFlow, domain=DOMAIN):
                     CONF_EXCHANGE_RATE_CURRENCIES: [],
                     CONF_EXCHANGE_BASE: DEFAULT_EXCHANGE_BASE,
                     CONF_POLL_INTERVAL: DEFAULT_POLL_INTERVAL,
+                    CONF_INCLUDE_PORTFOLIO_BREAKDOWN: True,
                     CONF_INCLUDE_TRANSACTION_SUMMARY: False,
                     CONF_INCLUDE_ZERO_BALANCES: False,
                 },
@@ -342,6 +357,10 @@ class OptionsFlowHandler(OptionsFlowWithReload):
                     default=defaults.get(CONF_POLL_INTERVAL, DEFAULT_POLL_INTERVAL),
                 ): vol.All(vol.Coerce(int), vol.Range(min=MIN_POLL_INTERVAL)),
                 vol.Optional(
+                    CONF_INCLUDE_PORTFOLIO_BREAKDOWN,
+                    default=defaults.get(CONF_INCLUDE_PORTFOLIO_BREAKDOWN, True),
+                ): bool,
+                vol.Optional(
                     CONF_INCLUDE_TRANSACTION_SUMMARY,
                     default=defaults.get(CONF_INCLUDE_TRANSACTION_SUMMARY, False),
                 ): bool,
@@ -376,6 +395,9 @@ class OptionsFlowHandler(OptionsFlowWithReload):
                 CONF_EXCHANGE_BASE: exchange_base,
                 CONF_POLL_INTERVAL: int(
                     user_input.get(CONF_POLL_INTERVAL, DEFAULT_POLL_INTERVAL)
+                ),
+                CONF_INCLUDE_PORTFOLIO_BREAKDOWN: bool(
+                    user_input.get(CONF_INCLUDE_PORTFOLIO_BREAKDOWN, True)
                 ),
                 CONF_INCLUDE_TRANSACTION_SUMMARY: bool(
                     user_input.get(CONF_INCLUDE_TRANSACTION_SUMMARY, False)

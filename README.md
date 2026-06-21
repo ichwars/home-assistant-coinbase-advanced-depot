@@ -4,6 +4,10 @@
 
 Custom integration domain: `coinbase_advanced`.
 
+This is an unofficial community integration and is not affiliated with,
+endorsed by, or sponsored by Coinbase. Coinbase and related marks are
+trademarks of Coinbase.
+
 This version uses direct Coinbase CDP REST JWT signing and does **not** depend on
 `coinbase-advanced-py`. That avoids dependency conflicts with Home Assistant's
 `websockets` constraints while still allowing read-only REST access to Coinbase
@@ -50,12 +54,14 @@ Options allow selecting:
 - exchange-rate currencies, e.g. `BTC, ETH, EUR`
 - exchange-rate base currency, e.g. `USD`
 
-Wallet behavior in version 0.4.0-rc6:
+Wallet and portfolio behavior in version 0.4.0-rc7 and newer:
 
-- A depot value sensor is always created and sums non-vault account balances in the configured base currency.
+- A depot value sensor is always created. It prefers Coinbase portfolio breakdown totals when available, so staked funds are included in the total depot value.
+- Portfolio breakdown sensors are enabled by default and create a separate portfolio sensor area for total value, crypto value, cash value, and non-zero futures/equities/PnL values when Coinbase reports them.
 - If `account_balance_currencies` is empty, only non-vault accounts with a non-zero balance create wallet sensors.
 - If `account_balance_currencies` is set, only those currencies create wallet sensors.
 - `include_zero_balances` can be enabled to show every non-vault zero-balance account returned by Coinbase.
+- Staked funds returned by Coinbase portfolio breakdowns, such as staked `ETH`, create position balance sensors even when the account wallet endpoint reports `ETH2` or `CBETH` as zero. These position sensors include attributes for fiat value, allocation, cost basis, average entry price, unrealized PnL, and available trade/transfer/send amounts when Coinbase provides them.
 - Stale wallet/product/rate entities created by older options are removed automatically on reload.
 
 ## Services
@@ -77,7 +83,8 @@ Force a refresh of one config entry.
 
 ## Options quick guide
 
-- `account_balance_currencies`: wallet assets such as `ETH`, `BTC`, `USDC`. Leave empty to show only wallets with non-zero balances. If you accidentally enter `ETH-USD`, the integration normalizes it to `ETH`.
+- `account_balance_currencies`: wallet and portfolio-position assets such as `ETH`, `BTC`, `USDC`. Leave empty to show only balances with non-zero values. If you accidentally enter `ETH-USD`, the integration normalizes it to `ETH`.
+- `include_portfolio_breakdown`: enabled by default. Includes Coinbase portfolio breakdown totals and positions, including staked funds.
 - `products`: Coinbase market pairs such as `ETH-USD`, `BTC-USD`. If you enter a single asset like `ETH`, it is normalized to `ETH-<exchange_base>`; with `exchange_base=USD`, that becomes `ETH-USD`.
 - `exchange_rate_currencies`: target currencies for exchange-rate sensors, such as `EUR`, `BTC`, `ETH`.
 
@@ -93,6 +100,13 @@ from `custom_components/coinbase_advanced/brand/`. This repository includes:
 
 Older Home Assistant versions can still use the integration, but may not display
 the local picture.
+
+## v0.4.0-rc7 changes
+
+- Added optional Coinbase portfolio breakdown polling, enabled by default.
+- Added portfolio breakdown value sensors for total, crypto, cash, and non-zero futures/equities/PnL values.
+- Added richer portfolio position attributes for staked funds and other non-wallet positions.
+- Replaced the integration icon and logo with the selected Portfolio Pulse brand asset.
 
 ## v0.4.0-rc6 changes
 

@@ -23,17 +23,32 @@ from cryptography.hazmat.primitives.asymmetric import ec, utils
 import requests
 
 from .const import (
+    API_ACCOUNT_TYPE,
     API_ACCOUNT_TYPE_VAULT,
+    API_ACCOUNT_UUID,
     API_ACCOUNTS,
+    API_ALLOCATION,
+    API_ASSET,
+    API_AVAILABLE_TO_SEND_CRYPTO,
+    API_AVAILABLE_TO_TRADE_CRYPTO,
+    API_AVAILABLE_TO_TRANSFER_CRYPTO,
+    API_AVERAGE_ENTRY_PRICE,
     API_AVAILABLE_BALANCE,
+    API_COST_BASIS,
     API_CURRENCY,
     API_DATA,
     API_HOLD,
     API_ID,
     API_NAME,
+    API_PORTFOLIO_BALANCES,
     API_PORTFOLIOS,
     API_RATES,
+    API_SPOT_POSITIONS,
+    API_TOTAL_BALANCE,
+    API_TOTAL_BALANCE_CRYPTO,
+    API_TOTAL_BALANCE_FIAT,
     API_TYPE,
+    API_UNREALIZED_PNL,
     API_UUID,
     API_VALUE,
     DEFAULT_EXCHANGE_BASE,
@@ -44,7 +59,7 @@ _LOGGER = logging.getLogger(__name__)
 BASE_URL = "api.coinbase.com"
 BASE_URL_HTTPS = f"https://{BASE_URL}"
 API_PREFIX = "/api/v3/brokerage"
-USER_AGENT = "home-assistant-coinbase-advanced/0.4.0-rc6"
+USER_AGENT = "home-assistant-coinbase-advanced/0.4.0-rc7"
 RATE_LIMIT_HEADERS = {
     "x-ratelimit-limit",
     "x-ratelimit-remaining",
@@ -69,6 +84,7 @@ class CoinbaseSnapshot:
     """Normalized snapshot for Home Assistant entities."""
 
     portfolios: list[dict[str, Any]]
+    portfolio_breakdowns: list[dict[str, Any]]
     accounts: list[dict[str, Any]]
     products: dict[str, dict[str, Any]]
     exchange_rates: dict[str, Any] | None
@@ -116,6 +132,29 @@ def _coerce_float(value: Any, default: float = 0.0) -> float:
         return float(value)
     except (TypeError, ValueError):
         return default
+
+
+def _coerce_optional_float(value: Any) -> float | None:
+    """Coerce API numeric strings to float, preserving missing values."""
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _money_value(value: Any) -> float | None:
+    """Return a numeric value from a Coinbase money object or scalar."""
+    if isinstance(value, Mapping):
+        value = value.get(API_VALUE)
+    return _coerce_optional_float(value)
+
+
+def _money_currency(value: Any) -> str | None:
+    """Return the currency from a Coinbase money object."""
+    if not isinstance(value, Mapping):
+        return None
+    currency = value.get(API_CURRENCY)
+    return str(currency).upper() if currency else None
 
 
 def _normalize_api_secret(api_secret: str) -> str:
@@ -203,11 +242,161 @@ def account_balance(account: Mapping[str, Any]) -> float:
     return _coerce_float(available) + _coerce_float(hold)
 
 
+def position_asset(position: Mapping[str, Any]) -> str:
+    """Return portfolio position asset code."""
+    return str(position.get(API_ASSET) or "").upper()
+
+
+def position_account_id(position: Mapping[str, Any]) -> str:
+    """Return portfolio position account id."""
+    return str(position.get(API_ACCOUNT_UUID) or position_asset(position) or "unknown")
+
+
+def position_account_type(position: Mapping[str, Any]) -> str:
+    """Return portfolio position account type."""
+    return str(position.get(API_ACCOUNT_TYPE) or "")
+
+
+def position_balance(position: Mapping[str, Any]) -> float:
+    """Return portfolio position crypto balance."""
+    return _coerce_float(position.get(API_TOTAL_BALANCE_CRYPTO))
+
+
+def position_fiat_value(position: Mapping[str, Any]) -> float | None:
+    """Return portfolio position fiat value."""
+    return _coerce_optional_float(position.get(API_TOTAL_BALANCE_FIAT))
+
+
+def position_allocation(position: Mapping[str, Any]) -> float | None:
+    """Return portfolio position allocation ratio."""
+    return _coerce_optional_float(position.get(API_ALLOCATION))
+
+
+def position_cost_basis(position: Mapping[str, Any]) -> float | None:
+    """Return portfolio position cost basis value."""
+    return _money_value(position.get(API_COST_BASIS))
+
+
+def position_average_entry_price(position: Mapping[str, Any]) -> float | None:
+    """Return portfolio position average entry price."""
+    return _money_value(position.get(API_AVERAGE_ENTRY_PRICE))
+
+
+def position_unrealized_pnl(position: Mapping[str, Any]) -> float | None:
+    """Return portfolio position unrealized profit/loss."""
+    return _coerce_optional_float(position.get(API_UNREALIZED_PNL))
+
+
+def position_available_to_trade(position: Mapping[str, Any]) -> float | None:
+    """Return position quantity available to trade."""
+    return _coerce_optional_float(position.get(API_AVAILABLE_TO_TRADE_CRYPTO))
+
+
+def position_available_to_transfer(position: Mapping[str, Any]) -> float | None:
+    """Return position quantity available to transfer."""
+    return _coerce_optional_float(position.get(API_AVAILABLE_TO_TRANSFER_CRYPTO))
+
+
+def position_available_to_send(position: Mapping[str, Any]) -> float | None:
+    """Return position quantity available to send."""
+    return _coerce_optional_float(position.get(API_AVAILABLE_TO_SEND_CRYPTO))
+
+
+def portfolio_spot_positions(
+    portfolio_breakdowns: Sequence[Mapping[str, Any]],
+) -> list[dict[str, Any]]:
+    """Return spot positions from portfolio breakdown payloads."""
+    positions: list[dict[str, Any]] = []
+    for breakdown in portfolio_breakdowns:
+        raw_positions = breakdown.get(API_SPOT_POSITIONS, [])
+        if not isinstance(raw_positions, Sequence) or isinstance(
+            raw_positions, str | bytes | bytearray
+        ):
+            continue
+        positions.extend(
+            dict(position)
+            for position in raw_positions
+            if isinstance(position, Mapping) and position_asset(position)
+        )
+    return positions
+
+
+def portfolio_balance_value(
+    portfolio_breakdowns: Sequence[Mapping[str, Any]],
+    balance_key: str,
+) -> float | None:
+    """Return the summed portfolio balance value for a Coinbase balance key."""
+    total = 0.0
+    has_value = False
+    for breakdown in portfolio_breakdowns:
+        balances = breakdown.get(API_PORTFOLIO_BALANCES, {})
+        if not isinstance(balances, Mapping):
+            continue
+        value = _money_value(balances.get(balance_key))
+        if value is None:
+            continue
+        total += value
+        has_value = True
+
+    return round(total, 8) if has_value else None
+
+
+def portfolio_balance_currency(
+    portfolio_breakdowns: Sequence[Mapping[str, Any]],
+    balance_key: str,
+) -> str | None:
+    """Return the first currency reported for a portfolio balance key."""
+    for breakdown in portfolio_breakdowns:
+        balances = breakdown.get(API_PORTFOLIO_BALANCES, {})
+        if not isinstance(balances, Mapping):
+            continue
+        currency = _money_currency(balances.get(balance_key))
+        if currency:
+            return currency
+    return None
+
+
+def _portfolio_breakdown_value_in_base(
+    portfolio_breakdowns: Sequence[Mapping[str, Any]],
+    exchange_base: str,
+) -> float | None:
+    """Return total portfolio value from Coinbase breakdowns when available."""
+    total = 0.0
+    has_value = False
+    for breakdown in portfolio_breakdowns:
+        balances = breakdown.get(API_PORTFOLIO_BALANCES, {})
+        if not isinstance(balances, Mapping):
+            continue
+        total_balance = balances.get(API_TOTAL_BALANCE, {})
+        if _money_currency(total_balance) != exchange_base.upper():
+            continue
+        value = _money_value(total_balance)
+        if value is None:
+            continue
+        total += value
+        has_value = True
+    if not has_value:
+        return None
+    return round(total, 8)
+
+
 def portfolio_value_in_base(
     accounts: Sequence[Mapping[str, Any]],
     exchange_rates: Mapping[str, Any] | None,
+    portfolio_breakdowns: Sequence[Mapping[str, Any]] | None = None,
 ) -> float | None:
     """Return non-vault portfolio value in the exchange-rate base currency."""
+    exchange_base = str(
+        (exchange_rates or {}).get(API_CURRENCY) or DEFAULT_EXCHANGE_BASE
+    )
+    if portfolio_breakdowns:
+        breakdown_value = _portfolio_breakdown_value_in_base(
+            portfolio_breakdowns,
+            exchange_base,
+        )
+        if breakdown_value is not None:
+            return breakdown_value
+
     if not exchange_rates:
         return None
 
@@ -300,6 +489,30 @@ class CoinbaseAdvancedApi:
         portfolios = response.get(API_PORTFOLIOS, []) if isinstance(response, Mapping) else []
         return [dict(item) for item in portfolios if isinstance(item, Mapping)]
 
+    def fetch_portfolio_breakdown(self, portfolio_id: str) -> dict[str, Any]:
+        """Fetch one portfolio breakdown."""
+        response = self.call_rest("GET", f"{API_PREFIX}/portfolios/{portfolio_id}")
+        if isinstance(response, Mapping):
+            breakdown = response.get("breakdown")
+            if isinstance(breakdown, Mapping):
+                return dict(breakdown)
+            return dict(response)
+        return {}
+
+    def fetch_portfolio_breakdowns(
+        self, portfolios: Sequence[Mapping[str, Any]]
+    ) -> list[dict[str, Any]]:
+        """Fetch breakdowns for all known portfolios."""
+        breakdowns: list[dict[str, Any]] = []
+        for portfolio in portfolios:
+            portfolio_id = portfolio.get(API_UUID) or portfolio.get(API_ID)
+            if not portfolio_id:
+                continue
+            breakdown = self.fetch_portfolio_breakdown(str(portfolio_id))
+            if breakdown:
+                breakdowns.append(breakdown)
+        return breakdowns
+
     def fetch_accounts(self) -> list[dict[str, Any]]:
         """Fetch all Coinbase accounts, following cursors where present."""
         response = self.call_rest("GET", f"{API_PREFIX}/accounts")
@@ -359,9 +572,15 @@ class CoinbaseAdvancedApi:
         exchange_base: str = DEFAULT_EXCHANGE_BASE,
         include_exchange_rates: bool = True,
         include_transaction_summary: bool = False,
+        include_portfolio_breakdown: bool = True,
     ) -> CoinbaseSnapshot:
         """Fetch all data needed by the current entity set."""
         portfolios = self.fetch_portfolios()
+        portfolio_breakdowns = (
+            self.fetch_portfolio_breakdowns(portfolios)
+            if include_portfolio_breakdown
+            else []
+        )
         accounts = self.fetch_accounts()
         products = self.fetch_products(product_ids or [])
         exchange_rates = (
@@ -373,6 +592,7 @@ class CoinbaseAdvancedApi:
 
         return CoinbaseSnapshot(
             portfolios=portfolios,
+            portfolio_breakdowns=portfolio_breakdowns,
             accounts=accounts,
             products=products,
             exchange_rates=exchange_rates,
