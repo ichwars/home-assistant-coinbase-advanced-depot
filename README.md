@@ -54,15 +54,16 @@ Options allow selecting:
 - exchange-rate currencies, e.g. `BTC, ETH, EUR`
 - exchange-rate base currency, e.g. `USD`
 
-Wallet and portfolio behavior in version 0.4.0-rc7 and newer:
+Wallet and portfolio behavior in version 0.4.0-rc8 and newer:
 
 - A depot value sensor is always created. It prefers Coinbase portfolio breakdown totals when available, so staked funds are included in the total depot value.
 - Portfolio breakdown sensors are enabled by default and create a separate portfolio sensor area for total value, crypto value, cash value, and non-zero futures/equities/PnL values when Coinbase reports them.
 - If `account_balance_currencies` is empty, only non-vault accounts with a non-zero balance create wallet sensors.
 - If `account_balance_currencies` is set, only those currencies create wallet sensors.
 - `include_zero_balances` can be enabled to show every non-vault zero-balance account returned by Coinbase.
-- Staked funds returned by Coinbase portfolio breakdowns, such as staked `ETH`, create position balance sensors even when the account wallet endpoint reports `ETH2` or `CBETH` as zero. These position sensors include attributes for fiat value, allocation, cost basis, average entry price, unrealized PnL, and available trade/transfer/send amounts when Coinbase provides them.
+- Staked funds returned by Coinbase portfolio breakdowns, such as staked `ETH`, create position balance sensors even when the account wallet endpoint reports `ETH2` or `CBETH` as zero. These position sensors include attributes for fiat value, allocation, cost basis, average entry price, unrealized PnL, available trade/transfer/send amounts, asset color, asset UUID, and cash marker when Coinbase provides them.
 - Stale wallet/product/rate entities created by older options are removed automatically on reload.
+- Diagnostics include compact portfolio metadata, portfolio breakdown section counts, and the latest Coinbase rate-limit headers seen by the API client.
 
 ## Services
 
@@ -93,6 +94,8 @@ Force a refresh of one config entry.
 Home Assistant 2026.3 and newer can load local custom-integration brand images
 from `custom_components/coinbase_advanced/brand/`. This repository includes:
 
+- `icon.png`
+- `logo.png`
 - `brand/icon.png`
 - `brand/logo.png`
 - `custom_components/coinbase_advanced/brand/icon.png`
@@ -100,6 +103,19 @@ from `custom_components/coinbase_advanced/brand/`. This repository includes:
 
 Older Home Assistant versions can still use the integration, but may not display
 the local picture.
+
+HACS update cards can still show the central Home Assistant Brands placeholder
+until HACS uses local custom-integration brands for update entities or its
+remote brand cache refreshes. The integration ships the local Home Assistant
+brand assets and root-level fallback assets, but the legacy HACS update entity
+picture is served from `https://brands.home-assistant.io/_/coinbase_advanced/icon.png`.
+
+## v0.4.0-rc8 changes
+
+- Added root-level `icon.png` and `logo.png` fallbacks in addition to the HACS/HA brand directories.
+- Added asset color, asset UUID, and cash marker attributes for portfolio position sensors.
+- Added diagnostics for portfolio metadata, portfolio breakdown section counts, and latest Coinbase rate-limit headers.
+- Documented the current HACS update-card placeholder limitation for central Home Assistant Brands CDN images.
 
 ## v0.4.0-rc7 changes
 

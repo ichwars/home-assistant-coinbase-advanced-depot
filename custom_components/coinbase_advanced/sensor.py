@@ -31,6 +31,8 @@ from .api import (
     position_account_type,
     position_allocation,
     position_asset,
+    position_asset_color,
+    position_asset_uuid,
     position_average_entry_price,
     position_available_to_send,
     position_available_to_trade,
@@ -38,6 +40,7 @@ from .api import (
     position_balance,
     position_cost_basis,
     position_fiat_value,
+    position_is_cash,
     position_unrealized_pnl,
 )
 from .const import (
@@ -45,6 +48,8 @@ from .const import (
     API_ACCOUNT_TYPE_STAKED_FUNDS,
     API_ACCOUNT_TYPE_WALLET,
     API_ALLOCATION,
+    API_ASSET_COLOR,
+    API_ASSET_UUID,
     API_AVAILABLE_TO_SEND_CRYPTO,
     API_AVAILABLE_TO_TRADE_CRYPTO,
     API_AVAILABLE_TO_TRANSFER_CRYPTO,
@@ -54,6 +59,7 @@ from .const import (
     API_CURRENCY,
     API_FUTURES_UNREALIZED_PNL,
     API_HOLD,
+    API_IS_CASH,
     API_PERP_UNREALIZED_PNL,
     API_RATES,
     API_TOTAL_BALANCE,
@@ -537,6 +543,9 @@ class PortfolioPositionSensor(CoinbaseAdvancedBaseEntity):
             API_AVAILABLE_TO_TRADE_CRYPTO: position_available_to_trade(position),
             API_AVAILABLE_TO_TRANSFER_CRYPTO: position_available_to_transfer(position),
             API_AVAILABLE_TO_SEND_CRYPTO: position_available_to_send(position),
+            API_ASSET_COLOR: position_asset_color(position),
+            API_ASSET_UUID: position_asset_uuid(position),
+            API_IS_CASH: position_is_cash(position),
         }
 
 

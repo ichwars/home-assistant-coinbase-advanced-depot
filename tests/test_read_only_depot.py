@@ -135,6 +135,8 @@ class BrandAssetTests(unittest.TestCase):
     """Brand asset placement tests."""
 
     BRAND_ASSETS = [
+        ROOT / "icon.png",
+        ROOT / "logo.png",
         ROOT / "brand" / "icon.png",
         ROOT / "brand" / "logo.png",
         INTEGRATION / "brand" / "icon.png",
@@ -160,6 +162,9 @@ class BrandAssetTests(unittest.TestCase):
     def test_logo_uses_the_selected_brand_icon(self) -> None:
         """Keep logo and icon aligned with the selected project brand asset."""
         pairs = [
+            (ROOT / "icon.png", ROOT / "logo.png"),
+            (ROOT / "brand" / "icon.png", ROOT / "icon.png"),
+            (ROOT / "brand" / "logo.png", ROOT / "logo.png"),
             (ROOT / "brand" / "icon.png", ROOT / "brand" / "logo.png"),
             (INTEGRATION / "brand" / "icon.png", INTEGRATION / "brand" / "logo.png"),
         ]
@@ -383,6 +388,9 @@ class DepotValueTests(unittest.TestCase):
                         "available_to_trade_crypto": "0",
                         "available_to_transfer_crypto": "0",
                         "available_to_send_crypto": "0",
+                        "asset_color": "#627EEA",
+                        "asset_uuid": "eth-asset",
+                        "is_cash": False,
                         "account_type": "ACCOUNT_TYPE_STAKED_FUNDS",
                     }
                 ],
@@ -424,6 +432,44 @@ class DepotValueTests(unittest.TestCase):
         self.assertEqual(api_module.position_available_to_trade(position), 0.0)
         self.assertEqual(api_module.position_available_to_transfer(position), 0.0)
         self.assertEqual(api_module.position_available_to_send(position), 0.0)
+        self.assertEqual(api_module.position_asset_color(position), "#627EEA")
+        self.assertEqual(api_module.position_asset_uuid(position), "eth-asset")
+        self.assertIs(api_module.position_is_cash(position), False)
+
+    def test_call_rest_captures_rate_limit_headers_for_diagnostics(self) -> None:
+        """Latest Coinbase rate-limit headers should be available in diagnostics."""
+        api_module = _load_module("api")
+
+        class FakeResponse:
+            status_code = 200
+            reason = "OK"
+            text = "{}"
+            headers = {
+                "x-ratelimit-limit": "100",
+                "x-ratelimit-remaining": "99",
+                "x-ratelimit-reset": "1710000000",
+            }
+
+            def json(self):
+                return {"ok": True}
+
+        client = api_module.CoinbaseAdvancedApi("organizations/org/apiKeys/key", "secret")
+        client._headers = lambda method, path: {}  # type: ignore[method-assign]
+        client.session = types.SimpleNamespace(
+            request=lambda *args, **kwargs: FakeResponse()
+        )
+
+        result = client.call_rest("GET", "/api/v3/brokerage/accounts")
+
+        self.assertEqual(result["ok"], True)
+        self.assertEqual(
+            client.last_rate_limit_headers,
+            {
+                "x-ratelimit-limit": "100",
+                "x-ratelimit-remaining": "99",
+                "x-ratelimit-reset": "1710000000",
+            },
+        )
 
     def test_fetch_snapshot_can_skip_portfolio_breakdowns(self) -> None:
         """The portfolio breakdown request can be disabled from options."""
@@ -458,6 +504,14 @@ class DepotValueTests(unittest.TestCase):
 
         self.assertEqual(snapshot.portfolio_breakdowns, [])
         self.assertEqual(api.breakdown_calls, 0)
+
+    def test_diagnostics_expose_portfolio_meta_and_rate_limit_headers(self) -> None:
+        """Diagnostics should include metadata without creating more user sensors."""
+        source = (INTEGRATION / "diagnostics.py").read_text(encoding="utf-8")
+
+        self.assertIn("portfolio_metadata", source)
+        self.assertIn("portfolio_breakdown_sections", source)
+        self.assertIn("rate_limit_headers", source)
 
 
 if __name__ == "__main__":

@@ -29,6 +29,8 @@ from .const import (
     API_ACCOUNTS,
     API_ALLOCATION,
     API_ASSET,
+    API_ASSET_COLOR,
+    API_ASSET_UUID,
     API_AVAILABLE_TO_SEND_CRYPTO,
     API_AVAILABLE_TO_TRADE_CRYPTO,
     API_AVAILABLE_TO_TRANSFER_CRYPTO,
@@ -39,6 +41,7 @@ from .const import (
     API_DATA,
     API_HOLD,
     API_ID,
+    API_IS_CASH,
     API_NAME,
     API_PORTFOLIO_BALANCES,
     API_PORTFOLIOS,
@@ -59,7 +62,7 @@ _LOGGER = logging.getLogger(__name__)
 BASE_URL = "api.coinbase.com"
 BASE_URL_HTTPS = f"https://{BASE_URL}"
 API_PREFIX = "/api/v3/brokerage"
-USER_AGENT = "home-assistant-coinbase-advanced/0.4.0-rc7"
+USER_AGENT = "home-assistant-coinbase-advanced/0.4.0-rc8"
 RATE_LIMIT_HEADERS = {
     "x-ratelimit-limit",
     "x-ratelimit-remaining",
@@ -89,6 +92,7 @@ class CoinbaseSnapshot:
     products: dict[str, dict[str, Any]]
     exchange_rates: dict[str, Any] | None
     transaction_summary: dict[str, Any] | None
+    rate_limit_headers: dict[str, str]
 
 
 def as_plain_data(value: Any) -> Any:
@@ -260,6 +264,24 @@ def position_account_type(position: Mapping[str, Any]) -> str:
 def position_balance(position: Mapping[str, Any]) -> float:
     """Return portfolio position crypto balance."""
     return _coerce_float(position.get(API_TOTAL_BALANCE_CRYPTO))
+
+
+def position_asset_color(position: Mapping[str, Any]) -> str | None:
+    """Return portfolio position asset color."""
+    color = position.get(API_ASSET_COLOR)
+    return str(color) if color else None
+
+
+def position_asset_uuid(position: Mapping[str, Any]) -> str | None:
+    """Return portfolio position asset UUID."""
+    asset_uuid = position.get(API_ASSET_UUID)
+    return str(asset_uuid) if asset_uuid else None
+
+
+def position_is_cash(position: Mapping[str, Any]) -> bool | None:
+    """Return whether Coinbase marks this position as cash."""
+    value = position.get(API_IS_CASH)
+    return value if isinstance(value, bool) else None
 
 
 def position_fiat_value(position: Mapping[str, Any]) -> float | None:
@@ -437,6 +459,7 @@ class CoinbaseAdvancedApi:
         self.api_secret = _normalize_api_secret(api_secret)
         self.timeout = timeout
         self.rate_limit_headers = rate_limit_headers
+        self.last_rate_limit_headers: dict[str, str] = {}
         self.session = requests.Session()
 
     def _build_rest_jwt(self, method: str, path: str) -> str:
@@ -597,6 +620,7 @@ class CoinbaseAdvancedApi:
             products=products,
             exchange_rates=exchange_rates,
             transaction_summary=transaction_summary,
+            rate_limit_headers=dict(getattr(self, "last_rate_limit_headers", {})),
         )
 
     def call_rest(
@@ -649,13 +673,14 @@ class CoinbaseAdvancedApi:
                 ) from error
 
         if self.rate_limit_headers and isinstance(result, dict):
+            self.last_rate_limit_headers = {
+                key: response.headers[key]
+                for key in RATE_LIMIT_HEADERS
+                if response.headers.get(key) is not None
+            }
             result = {
                 **result,
-                **{
-                    key: response.headers.get(key)
-                    for key in RATE_LIMIT_HEADERS
-                    if response.headers.get(key) is not None
-                },
+                **self.last_rate_limit_headers,
             }
 
         _LOGGER.debug("Coinbase %s %s returned keys: %s", method, path, list(result) if isinstance(result, dict) else type(result))

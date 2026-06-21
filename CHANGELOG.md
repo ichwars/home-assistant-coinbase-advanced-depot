@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.4.0-rc8
+
+- Add root-level `icon.png` and `logo.png` fallbacks in addition to the HACS/HA brand directories.
+- Add asset color, asset UUID, and cash marker attributes for portfolio position sensors.
+- Add diagnostics for portfolio metadata, portfolio breakdown section counts, and latest Coinbase rate-limit headers.
+- Document the current HACS update-card placeholder limitation for central Home Assistant Brands CDN images.
+
 ## 0.4.0-rc7
 
 - Replaced the Coinbase-like brand concept with the neutral Portfolio Pulse brand icon scaled from `ha_coinbase.png`.
