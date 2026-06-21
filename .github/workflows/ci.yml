@@ -1,0 +1,57 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Validate integration
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Run regression tests
+        run: python -B -m unittest discover -s tests -p "test_*.py"
+
+      - name: Validate JSON metadata
+        run: |
+          python -B - <<'PY'
+          import json
+          from pathlib import Path
+
+          files = [
+              Path("custom_components/coinbase_advanced/manifest.json"),
+              Path("custom_components/coinbase_advanced/strings.json"),
+              Path("custom_components/coinbase_advanced/translations/en.json"),
+              Path("custom_components/coinbase_advanced/translations/de.json"),
+              Path("hacs.json"),
+          ]
+
+          for path in files:
+              with path.open(encoding="utf-8") as handle:
+                  json.load(handle)
+              print(f"json ok: {path}")
+          PY
+
+      - name: Compile Python sources
+        run: |
+          python -B - <<'PY'
+          from pathlib import Path
+
+          files = list(Path("custom_components/coinbase_advanced").glob("*.py"))
+          files.append(Path("tests/test_read_only_depot.py"))
+          for path in files:
+              compile(path.read_text(encoding="utf-8"), str(path), "exec")
+              print(f"syntax ok: {path}")
+          PY

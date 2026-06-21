@@ -1,0 +1,58 @@
+{
+  "config": {
+    "abort": {
+      "already_configured": "Dieses Coinbase-Konto ist bereits konfiguriert.",
+      "wrong_account": "Die neuen Zugangsdaten gehoeren zu einem anderen Coinbase-Konto."
+    },
+    "error": {
+      "cannot_connect": "Verbindung zu Coinbase konnte nicht hergestellt werden.",
+      "invalid_auth": "Coinbase hat die API-Zugangsdaten abgelehnt.",
+      "invalid_auth_key": "Coinbase hat den API-Key abgelehnt.",
+      "invalid_auth_secret": "Coinbase hat das API-Secret abgelehnt.",
+      "invalid_key_format": "Das sieht nicht nach einem Coinbase Advanced/CDP API-Key aus. Verwende das Format organizations/<org_id>/apiKeys/<key_id>.",
+      "unknown": "Unerwarteter Fehler"
+    },
+    "step": {
+      "user": {
+        "data": {
+          "api_key": "API-Key",
+          "api_token": "API-Secret"
+        },
+        "description": "Gib deine Coinbase Advanced / CDP API-Zugangsdaten ein. Verwende einen Read-only-Key; Trading-Berechtigungen werden nicht benoetigt und nicht genutzt.",
+        "title": "Coinbase Advanced API"
+      },
+      "reauth_confirm": {
+        "data": {
+          "api_key": "API-Key",
+          "api_token": "API-Secret"
+        },
+        "description": "Gib neue Read-only-Zugangsdaten fuer Coinbase Advanced / CDP ein.",
+        "title": "Coinbase Advanced erneut authentifizieren"
+      }
+    }
+  },
+  "options": {
+    "error": {
+      "currency_unavailable": "Eine oder mehrere Wallet-Währungen sind in deinen Coinbase-Konten nicht verfügbar. Wallet-Balances nutzen Asset-Symbole wie ETH oder BTC, nicht Handelspaare wie ETH-USD.",
+      "exchange_rate_unavailable": "Eine oder mehrere Wechselkurs-Währungen sind nicht verfügbar.",
+      "product_unavailable": "Ein oder mehrere Produkte sind nicht verfügbar. Produktpreis-Sensoren nutzen Handelspaare wie ETH-USD oder BTC-USD.",
+      "invalid_auth": "Coinbase hat die API-Zugangsdaten abgelehnt.",
+      "unknown": "Unerwarteter Fehler"
+    },
+    "step": {
+      "init": {
+        "data": {
+          "account_balance_currencies": "Wallet-Balances: Asset-Symbole, z. B. ETH, BTC, USDC. Leer lassen = nur Wallets mit Bestand.",
+          "include_zero_balances": "Zero-Balance-Wallets anzeigen, wenn kein expliziter Wallet-Filter gesetzt ist.",
+          "products": "Produktpreis-Sensoren: Handelspaare, z. B. ETH-USD, BTC-USD. ETH allein wird anhand der gewählten Basiswährung ergänzt, z. B. ETH-USD.",
+          "exchange_rate_currencies": "Wechselkurs-Sensoren: Zielwährungen, z. B. EUR, BTC, ETH.",
+          "exchange_base": "Quote-/Basiswährung für Preise und Wechselkurse, z. B. USD oder EUR.",
+          "poll_interval": "Abrufintervall in Sekunden, mindestens 30.",
+          "include_transaction_summary": "Transaktionsübersicht abrufen, falls dein API-Key die Berechtigung hat."
+        },
+        "description": "Coinbase-Advanced-Depot-Sensoren und Read-only-API-Zugriff konfigurieren. Wallet-Balances sind Assets wie ETH. Produktpreise sind Handelspaare wie ETH-USD.",
+        "title": "Coinbase Advanced Optionen"
+      }
+    }
+  }
+}

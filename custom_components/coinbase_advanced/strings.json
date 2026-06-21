@@ -1,0 +1,58 @@
+{
+  "config": {
+    "abort": {
+      "already_configured": "This Coinbase account is already configured.",
+      "wrong_account": "The replacement credentials belong to a different Coinbase account."
+    },
+    "error": {
+      "cannot_connect": "Could not connect to Coinbase.",
+      "invalid_auth": "Coinbase rejected the API credentials.",
+      "invalid_auth_key": "Coinbase rejected the API key.",
+      "invalid_auth_secret": "Coinbase rejected the API secret.",
+      "invalid_key_format": "This does not look like a Coinbase Advanced/CDP API key. Use a key in the format organizations/<org_id>/apiKeys/<key_id>.",
+      "unknown": "Unexpected error"
+    },
+    "step": {
+      "user": {
+        "data": {
+          "api_key": "API key",
+          "api_token": "API secret"
+        },
+        "description": "Enter your Coinbase Advanced / CDP API key details. Use a read-only API key; trading permissions are not needed or used.",
+        "title": "Coinbase Advanced API"
+      },
+      "reauth_confirm": {
+        "data": {
+          "api_key": "API key",
+          "api_token": "API secret"
+        },
+        "description": "Enter replacement read-only Coinbase Advanced / CDP API key details.",
+        "title": "Reauthenticate Coinbase Advanced"
+      }
+    }
+  },
+  "options": {
+    "error": {
+      "currency_unavailable": "One or more requested wallet assets are not available in your Coinbase accounts. Wallet balances use asset symbols such as ETH or BTC, not product pairs such as ETH-USD.",
+      "exchange_rate_unavailable": "One or more requested exchange-rate currencies are not available.",
+      "product_unavailable": "One or more requested products are not available. Product price sensors use market pairs such as ETH-USD or BTC-USD.",
+      "invalid_auth": "Coinbase rejected the API credentials.",
+      "unknown": "Unexpected error"
+    },
+    "step": {
+      "init": {
+        "data": {
+          "account_balance_currencies": "Wallet balances: asset symbols, e.g. ETH, BTC, USDC. Leave empty for non-zero wallets only.",
+          "include_zero_balances": "Include zero-balance wallet sensors when no explicit wallet filter is set.",
+          "products": "Product price sensors: market pairs, e.g. ETH-USD, BTC-USD. A single asset like ETH is expanded using the selected base currency, e.g. ETH-USD.",
+          "exchange_rate_currencies": "Exchange-rate sensors: target currencies, e.g. EUR, BTC, ETH.",
+          "exchange_base": "Quote/base currency for prices and exchange rates, e.g. USD or EUR.",
+          "poll_interval": "Polling interval in seconds, minimum 30.",
+          "include_transaction_summary": "Fetch transaction summary if your API key has permission."
+        },
+        "description": "Configure Coinbase Advanced depot sensors and read-only API access. Wallet balances are assets such as ETH. Product prices are market pairs such as ETH-USD.",
+        "title": "Coinbase Advanced options"
+      }
+    }
+  }
+}
