@@ -45,8 +45,8 @@ _LOGGER = logging.getLogger(__name__)
 
 STEP_USER_DATA_SCHEMA = vol.Schema(
     {
-        vol.Required(CONF_API_KEY): vol.All(cv.string, str.strip, vol.Length(min=1)),
-        vol.Required(CONF_API_TOKEN): vol.All(cv.string, str.strip, vol.Length(min=1)),
+        vol.Required(CONF_API_KEY): cv.string,
+        vol.Required(CONF_API_TOKEN): cv.string,
     }
 )
 
@@ -143,7 +143,12 @@ def _validate_api_sync(data: Mapping[str, str]) -> dict[str, str]:
 
     # Coinbase Advanced/CDP keys look like organizations/{org_id}/apiKeys/{key_id}.
     # Keeping this check up front avoids accepting legacy Coinbase v2 keys.
-    if "organizations/" not in api_key or "/apiKeys/" not in api_key:
+    if (
+        not api_key
+        or not api_token
+        or "organizations/" not in api_key
+        or "/apiKeys/" not in api_key
+    ):
         raise InvalidKeyFormat
 
     api = CoinbaseAdvancedApi(api_key=api_key, api_secret=api_token)

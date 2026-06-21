@@ -50,7 +50,7 @@ Options allow selecting:
 - exchange-rate currencies, e.g. `BTC, ETH, EUR`
 - exchange-rate base currency, e.g. `USD`
 
-Wallet behavior in version 0.4.0-rc5:
+Wallet behavior in version 0.4.0-rc6:
 
 - A depot value sensor is always created and sums non-vault account balances in the configured base currency.
 - If `account_balance_currencies` is empty, only non-vault accounts with a non-zero balance create wallet sensors.
@@ -93,6 +93,11 @@ from `custom_components/coinbase_advanced/brand/`. This repository includes:
 
 Older Home Assistant versions can still use the integration, but may not display
 the local picture.
+
+## v0.4.0-rc6 changes
+
+- Fixed config flow loading by removing an unserializable `str.strip` callable from the Home Assistant form schema.
+- Credential values are still trimmed during validation.
 
 ## v0.4.0-rc5 changes
 

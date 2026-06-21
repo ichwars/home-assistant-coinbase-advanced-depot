@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.4.0-rc6
+
+- Fixed config flow loading by removing an unserializable `str.strip` callable from the Home Assistant form schema.
+- Credential values are still trimmed during validation.
+
 ## 0.4.0-rc5
 
 - Added root-level `brand/` assets for HACS repository cards while keeping the Home Assistant local brand assets inside the integration directory.

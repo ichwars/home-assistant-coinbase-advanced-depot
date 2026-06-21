@@ -122,6 +122,12 @@ class PackagingTests(unittest.TestCase):
 
         self.assertNotIn("import jwt", source)
 
+    def test_config_flow_schema_avoids_unserializable_python_callables(self) -> None:
+        """Home Assistant serializes config flow schemas for the frontend."""
+        source = (INTEGRATION / "config_flow.py").read_text(encoding="utf-8")
+
+        self.assertNotIn("str.strip", source.partition("def _csv_items")[0])
+
 
 class BrandAssetTests(unittest.TestCase):
     """Brand asset placement tests."""
