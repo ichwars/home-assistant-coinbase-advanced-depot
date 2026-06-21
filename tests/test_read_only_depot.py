@@ -123,6 +123,19 @@ class PackagingTests(unittest.TestCase):
         self.assertNotIn("import jwt", source)
 
 
+class BrandAssetTests(unittest.TestCase):
+    """Brand asset placement tests."""
+
+    def test_brand_assets_exist_for_home_assistant_and_hacs(self) -> None:
+        """Expose icons for HA local brands and HACS repository cards."""
+        repo_brand = ROOT / "brand"
+        integration_brand = INTEGRATION / "brand"
+
+        for directory in (repo_brand, integration_brand):
+            self.assertGreater((directory / "icon.png").stat().st_size, 0)
+            self.assertGreater((directory / "logo.png").stat().st_size, 0)
+
+
 class TranslationTests(unittest.TestCase):
     """Translation regression tests for Home Assistant frontend rendering."""
 

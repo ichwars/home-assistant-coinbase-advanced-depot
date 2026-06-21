@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.4.0-rc5
+
+- Added root-level `brand/` assets for HACS repository cards while keeping the Home Assistant local brand assets inside the integration directory.
+
 ## 0.4.0-rc4
 
 - Added field-level setup help for the Coinbase CDP API key name and private key.
