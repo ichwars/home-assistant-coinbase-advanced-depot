@@ -44,7 +44,7 @@ _LOGGER = logging.getLogger(__name__)
 BASE_URL = "api.coinbase.com"
 BASE_URL_HTTPS = f"https://{BASE_URL}"
 API_PREFIX = "/api/v3/brokerage"
-USER_AGENT = "home-assistant-coinbase-advanced/0.4.0-rc3"
+USER_AGENT = "home-assistant-coinbase-advanced/0.4.0-rc4"
 RATE_LIMIT_HEADERS = {
     "x-ratelimit-limit",
     "x-ratelimit-remaining",

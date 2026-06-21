@@ -9,22 +9,30 @@
       "invalid_auth": "Coinbase hat die API-Zugangsdaten abgelehnt.",
       "invalid_auth_key": "Coinbase hat den API-Key abgelehnt.",
       "invalid_auth_secret": "Coinbase hat das API-Secret abgelehnt.",
-      "invalid_key_format": "Das sieht nicht nach einem Coinbase Advanced/CDP API-Key aus. Verwende das Format organizations/ORG_ID/apiKeys/KEY_ID.",
+      "invalid_key_format": "Das sieht nicht nach einem Coinbase Advanced/CDP API-Key-Namen aus. Verwende den vollständigen Key-Namen im Format organizations/ORG_ID/apiKeys/KEY_ID.",
       "unknown": "Unerwarteter Fehler"
     },
     "step": {
       "user": {
         "data": {
-          "api_key": "API-Key",
-          "api_token": "API-Secret"
+          "api_key": "API-Key-Name",
+          "api_token": "API-Private-Key"
+        },
+        "data_description": {
+          "api_key": "Füge den vollständigen CDP-Key-Namen ein, zum Beispiel organizations/ORG_ID/apiKeys/KEY_ID. Verwende nicht den Anzeigenamen.",
+          "api_token": "Füge den EC Private Key aus der heruntergeladenen Coinbase-CDP-Key-JSON ein. Literal gespeicherte \\n-Zeilenumbrüche werden akzeptiert."
         },
         "description": "Gib deine Coinbase Advanced / CDP API-Zugangsdaten ein. Verwende einen Read-only-Key; Trading-Berechtigungen werden nicht benötigt und nicht genutzt.\n\nÖffne die [Coinbase API-Seite](https://portal.cdp.coinbase.com/access/api).",
         "title": "Coinbase Advanced API"
       },
       "reauth_confirm": {
         "data": {
-          "api_key": "API-Key",
-          "api_token": "API-Secret"
+          "api_key": "API-Key-Name",
+          "api_token": "API-Private-Key"
+        },
+        "data_description": {
+          "api_key": "Füge den vollständigen CDP-Key-Namen ein, zum Beispiel organizations/ORG_ID/apiKeys/KEY_ID. Verwende nicht den Anzeigenamen.",
+          "api_token": "Füge den EC Private Key aus der heruntergeladenen Coinbase-CDP-Key-JSON ein. Literal gespeicherte \\n-Zeilenumbrüche werden akzeptiert."
         },
         "description": "Gib neue Read-only-Zugangsdaten für Coinbase Advanced / CDP ein.\n\nÖffne die [Coinbase API-Seite](https://portal.cdp.coinbase.com/access/api).",
         "title": "Coinbase Advanced erneut authentifizieren"

@@ -9,22 +9,30 @@
       "invalid_auth": "Coinbase rejected the API credentials.",
       "invalid_auth_key": "Coinbase rejected the API key.",
       "invalid_auth_secret": "Coinbase rejected the API secret.",
-      "invalid_key_format": "This does not look like a Coinbase Advanced/CDP API key. Use a key in the format organizations/ORG_ID/apiKeys/KEY_ID.",
+      "invalid_key_format": "This does not look like a Coinbase Advanced/CDP API key name. Use the full key name in the format organizations/ORG_ID/apiKeys/KEY_ID.",
       "unknown": "Unexpected error"
     },
     "step": {
       "user": {
         "data": {
-          "api_key": "API key",
-          "api_token": "API secret"
+          "api_key": "API key name",
+          "api_token": "API private key"
+        },
+        "data_description": {
+          "api_key": "Paste the full CDP key name, for example organizations/ORG_ID/apiKeys/KEY_ID. Do not use the display name.",
+          "api_token": "Paste the EC private key from the downloaded Coinbase CDP key JSON. Literal \\n line breaks are accepted."
         },
         "description": "Enter your Coinbase Advanced / CDP API key details. Use a read-only API key; trading permissions are not needed or used.\n\nOpen the [Coinbase API key page](https://portal.cdp.coinbase.com/access/api).",
         "title": "Coinbase Advanced API"
       },
       "reauth_confirm": {
         "data": {
-          "api_key": "API key",
-          "api_token": "API secret"
+          "api_key": "API key name",
+          "api_token": "API private key"
+        },
+        "data_description": {
+          "api_key": "Paste the full CDP key name, for example organizations/ORG_ID/apiKeys/KEY_ID. Do not use the display name.",
+          "api_token": "Paste the EC private key from the downloaded Coinbase CDP key JSON. Literal \\n line breaks are accepted."
         },
         "description": "Enter replacement read-only Coinbase Advanced / CDP API key details.\n\nOpen the [Coinbase API key page](https://portal.cdp.coinbase.com/access/api).",
         "title": "Reauthenticate Coinbase Advanced"

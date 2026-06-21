@@ -173,6 +173,23 @@ class TranslationTests(unittest.TestCase):
 
         self.assertIn("https://portal.cdp.coinbase.com/access/api", description)
 
+    def test_setup_fields_explain_key_name_and_secret(self) -> None:
+        """Field help should explain what values Coinbase users need to paste."""
+        strings = json.loads((INTEGRATION / "strings.json").read_text(encoding="utf-8"))
+        user_step = strings["config"]["step"]["user"]
+
+        self.assertIn("data_description", user_step)
+        self.assertIn("organizations/ORG_ID/apiKeys/KEY_ID", user_step["data_description"]["api_key"])
+        self.assertIn("private key", user_step["data_description"]["api_token"].lower())
+
+    def test_invalid_key_format_message_mentions_key_name(self) -> None:
+        """The format error should distinguish the key name from the secret."""
+        strings = json.loads((INTEGRATION / "strings.json").read_text(encoding="utf-8"))
+
+        message = strings["config"]["error"]["invalid_key_format"]
+
+        self.assertIn("API key name", message)
+
 
 class DepotValueTests(unittest.TestCase):
     """Depot valuation tests."""

@@ -45,8 +45,8 @@ _LOGGER = logging.getLogger(__name__)
 
 STEP_USER_DATA_SCHEMA = vol.Schema(
     {
-        vol.Required(CONF_API_KEY): str,
-        vol.Required(CONF_API_TOKEN): str,
+        vol.Required(CONF_API_KEY): vol.All(cv.string, str.strip, vol.Length(min=1)),
+        vol.Required(CONF_API_TOKEN): vol.All(cv.string, str.strip, vol.Length(min=1)),
     }
 )
 
@@ -138,8 +138,8 @@ def _classify_auth_error(error: CoinbaseAdvancedAuthError) -> type[HomeAssistant
 
 def _validate_api_sync(data: Mapping[str, str]) -> dict[str, str]:
     """Validate the Coinbase API credentials."""
-    api_key = data[CONF_API_KEY]
-    api_token = data[CONF_API_TOKEN]
+    api_key = data[CONF_API_KEY].strip()
+    api_token = data[CONF_API_TOKEN].strip()
 
     # Coinbase Advanced/CDP keys look like organizations/{org_id}/apiKeys/{key_id}.
     # Keeping this check up front avoids accepting legacy Coinbase v2 keys.

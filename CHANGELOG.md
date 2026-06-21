@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.4.0-rc4
+
+- Added field-level setup help for the Coinbase CDP API key name and private key.
+- Trimmed setup credentials and reject empty values before Coinbase validation.
+- Clarified that the API key field expects the full CDP API key name, not the display name.
+
 ## 0.4.0-rc3
 
 - Fixed German umlauts in the setup and reauthentication dialogs.
