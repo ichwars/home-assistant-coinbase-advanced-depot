@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import importlib.util
 import inspect
+import json
 from pathlib import Path
 import sys
 import types
@@ -50,6 +51,22 @@ def _load_module(name: str):
     cryptography.hazmat = hazmat
     hazmat.primitives = primitives
     primitives.serialization = serialization
+    hashes = types.ModuleType("cryptography.hazmat.primitives.hashes")
+    hashes.SHA256 = lambda: object()
+    sys.modules["cryptography.hazmat.primitives.hashes"] = hashes
+    primitives.hashes = hashes
+    asymmetric = sys.modules.setdefault(
+        "cryptography.hazmat.primitives.asymmetric",
+        types.ModuleType("cryptography.hazmat.primitives.asymmetric"),
+    )
+    ec = types.ModuleType("cryptography.hazmat.primitives.asymmetric.ec")
+    ec.ECDSA = lambda algorithm: ("ecdsa", algorithm)
+    utils = types.ModuleType("cryptography.hazmat.primitives.asymmetric.utils")
+    utils.decode_dss_signature = lambda signature: (1, 2)
+    sys.modules["cryptography.hazmat.primitives.asymmetric.ec"] = ec
+    sys.modules["cryptography.hazmat.primitives.asymmetric.utils"] = utils
+    asymmetric.ec = ec
+    asymmetric.utils = utils
 
     module_name = f"{PACKAGE}.{name}"
     sys.modules.pop(module_name, None)
@@ -88,6 +105,22 @@ class ReadOnlyApiTests(unittest.TestCase):
             client.call_rest("POST", "/api/v3/brokerage/orders")
 
         self.assertIn("read-only", str(ctx.exception))
+
+
+class PackagingTests(unittest.TestCase):
+    """Packaging contract tests for Home Assistant loading."""
+
+    def test_manifest_does_not_require_pyjwt(self) -> None:
+        """The integration must not trigger HA requirement installation for PyJWT."""
+        manifest = json.loads((INTEGRATION / "manifest.json").read_text(encoding="utf-8"))
+
+        self.assertNotIn("PyJWT==2.10.1", manifest.get("requirements", []))
+
+    def test_api_does_not_import_jwt_package(self) -> None:
+        """JWT signing must be implemented without importing the external jwt package."""
+        source = (INTEGRATION / "api.py").read_text(encoding="utf-8")
+
+        self.assertNotIn("import jwt", source)
 
 
 class DepotValueTests(unittest.TestCase):

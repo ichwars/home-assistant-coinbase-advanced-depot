@@ -50,7 +50,7 @@ Options allow selecting:
 - exchange-rate currencies, e.g. `BTC, ETH, EUR`
 - exchange-rate base currency, e.g. `USD`
 
-Wallet behavior in version 0.4.0-rc1:
+Wallet behavior in version 0.4.0-rc2:
 
 - A depot value sensor is always created and sums non-vault account balances in the configured base currency.
 - If `account_balance_currencies` is empty, only non-vault accounts with a non-zero balance create wallet sensors.
@@ -91,6 +91,11 @@ from `custom_components/coinbase_advanced/brand/`. This repository includes:
 
 Older Home Assistant versions can still use the integration, but may not display
 the local picture.
+
+## v0.4.0-rc2 changes
+
+- Removed the `PyJWT` manifest requirement so Home Assistant can load the config flow without installing extra packages.
+- Replaced `PyJWT` usage with local ES256 JWT signing via `cryptography`.
 
 ## v0.4.0-rc1 changes
 

@@ -9,6 +9,7 @@ JWT scheme.
 
 from __future__ import annotations
 
+import base64
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 import json
@@ -17,8 +18,8 @@ import secrets
 import time
 from typing import Any
 
-from cryptography.hazmat.primitives import serialization
-import jwt
+from cryptography.hazmat.primitives import hashes, serialization
+from cryptography.hazmat.primitives.asymmetric import ec, utils
 import requests
 
 from .const import (
@@ -43,7 +44,7 @@ _LOGGER = logging.getLogger(__name__)
 BASE_URL = "api.coinbase.com"
 BASE_URL_HTTPS = f"https://{BASE_URL}"
 API_PREFIX = "/api/v3/brokerage"
-USER_AGENT = "home-assistant-coinbase-advanced/0.4.0-rc1"
+USER_AGENT = "home-assistant-coinbase-advanced/0.4.0-rc2"
 RATE_LIMIT_HEADERS = {
     "x-ratelimit-limit",
     "x-ratelimit-remaining",
@@ -141,6 +142,31 @@ def _normalize_api_secret(api_secret: str) -> str:
         api_secret = api_secret.replace("\\n", "\n")
 
     return api_secret
+
+
+def _base64url_encode(value: bytes) -> str:
+    """Return unpadded base64url encoded text."""
+    return base64.urlsafe_b64encode(value).rstrip(b"=").decode("ascii")
+
+
+def _jwt_json(value: Mapping[str, Any]) -> str:
+    """Return compact JSON for JWT signing."""
+    return json.dumps(value, separators=(",", ":"), sort_keys=True)
+
+
+def _encode_es256_jwt(
+    payload: Mapping[str, Any],
+    headers: Mapping[str, Any],
+    private_key: ec.EllipticCurvePrivateKey,
+) -> str:
+    """Encode and sign a JWT with ES256 without depending on PyJWT."""
+    encoded_header = _base64url_encode(_jwt_json(headers).encode("utf-8"))
+    encoded_payload = _base64url_encode(_jwt_json(payload).encode("utf-8"))
+    signing_input = f"{encoded_header}.{encoded_payload}".encode("ascii")
+    der_signature = private_key.sign(signing_input, ec.ECDSA(hashes.SHA256()))
+    r, s = utils.decode_dss_signature(der_signature)
+    signature = r.to_bytes(32, "big") + s.to_bytes(32, "big")
+    return f"{encoded_header}.{encoded_payload}.{_base64url_encode(signature)}"
 
 
 def account_id(account: Mapping[str, Any]) -> str:
@@ -244,8 +270,13 @@ class CoinbaseAdvancedApi:
             "exp": now + 120,
             "uri": uri,
         }
-        headers = {"kid": self.api_key, "nonce": secrets.token_hex()}
-        return jwt.encode(payload, private_key, algorithm="ES256", headers=headers)
+        headers = {
+            "alg": "ES256",
+            "kid": self.api_key,
+            "nonce": secrets.token_hex(),
+            "typ": "JWT",
+        }
+        return _encode_es256_jwt(payload, headers, private_key)
 
     def _headers(self, method: str, path: str) -> dict[str, str]:
         """Return Coinbase REST request headers."""

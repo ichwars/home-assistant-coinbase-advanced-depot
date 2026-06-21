@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.4.0-rc2
+
+- Removed the `PyJWT` manifest requirement that could prevent Home Assistant from loading the config flow.
+- Replaced `PyJWT` usage with local ES256 JWT signing via Home Assistant's existing `cryptography` dependency.
+
 ## 0.4.0-rc1
 
 - Refocused the integration as a read-only Coinbase depot monitor.
