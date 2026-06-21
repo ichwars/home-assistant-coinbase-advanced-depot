@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.4.0-rc3
+
+- Fixed German umlauts in the setup and reauthentication dialogs.
+- Added a direct link to the Coinbase API key page in the setup and reauthentication dialogs.
+- Replaced angle-bracket API key placeholders with safe plain-text examples to avoid Home Assistant frontend translation errors.
+- Replaced the local Home Assistant brand icon.
+
 ## 0.4.0-rc2
 
 - Removed the `PyJWT` manifest requirement that could prevent Home Assistant from loading the config flow.

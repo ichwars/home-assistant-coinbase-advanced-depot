@@ -123,6 +123,57 @@ class PackagingTests(unittest.TestCase):
         self.assertNotIn("import jwt", source)
 
 
+class TranslationTests(unittest.TestCase):
+    """Translation regression tests for Home Assistant frontend rendering."""
+
+    def _walk_strings(self, value):
+        """Yield all strings nested inside dictionaries and lists."""
+        if isinstance(value, str):
+            yield value
+        elif isinstance(value, dict):
+            for item in value.values():
+                yield from self._walk_strings(item)
+        elif isinstance(value, list):
+            for item in value:
+                yield from self._walk_strings(item)
+
+    def test_translations_do_not_contain_angle_bracket_placeholders(self) -> None:
+        """HA's frontend translator treats angle-bracket placeholders as tags."""
+        files = [
+            INTEGRATION / "strings.json",
+            INTEGRATION / "translations" / "en.json",
+            INTEGRATION / "translations" / "de.json",
+        ]
+
+        offenders: list[str] = []
+        for path in files:
+            data = json.loads(path.read_text(encoding="utf-8"))
+            offenders.extend(
+                f"{path.name}: {text}"
+                for text in self._walk_strings(data)
+                if "<" in text or ">" in text
+            )
+
+        self.assertEqual(offenders, [])
+
+    def test_german_translation_uses_real_umlauts(self) -> None:
+        """German UI strings should not use ASCII fallback spellings."""
+        german = (INTEGRATION / "translations" / "de.json").read_text(encoding="utf-8")
+
+        self.assertNotIn("benoetigt", german)
+        self.assertNotIn("gehoeren", german)
+        self.assertNotIn("fuer", german)
+        self.assertIn("benötigt", german)
+
+    def test_setup_description_links_to_coinbase_api_keys(self) -> None:
+        """The setup dialog should link directly to the Coinbase API key page."""
+        strings = json.loads((INTEGRATION / "strings.json").read_text(encoding="utf-8"))
+
+        description = strings["config"]["step"]["user"]["description"]
+
+        self.assertIn("https://portal.cdp.coinbase.com/access/api", description)
+
+
 class DepotValueTests(unittest.TestCase):
     """Depot valuation tests."""
 

@@ -9,7 +9,7 @@
       "invalid_auth": "Coinbase rejected the API credentials.",
       "invalid_auth_key": "Coinbase rejected the API key.",
       "invalid_auth_secret": "Coinbase rejected the API secret.",
-      "invalid_key_format": "This does not look like a Coinbase Advanced/CDP API key. Use a key in the format organizations/<org_id>/apiKeys/<key_id>.",
+      "invalid_key_format": "This does not look like a Coinbase Advanced/CDP API key. Use a key in the format organizations/ORG_ID/apiKeys/KEY_ID.",
       "unknown": "Unexpected error"
     },
     "step": {
@@ -18,7 +18,7 @@
           "api_key": "API key",
           "api_token": "API secret"
         },
-        "description": "Enter your Coinbase Advanced / CDP API key details. Use a read-only API key; trading permissions are not needed or used.",
+        "description": "Enter your Coinbase Advanced / CDP API key details. Use a read-only API key; trading permissions are not needed or used.\n\nOpen the [Coinbase API key page](https://portal.cdp.coinbase.com/access/api).",
         "title": "Coinbase Advanced API"
       },
       "reauth_confirm": {
@@ -26,7 +26,7 @@
           "api_key": "API key",
           "api_token": "API secret"
         },
-        "description": "Enter replacement read-only Coinbase Advanced / CDP API key details.",
+        "description": "Enter replacement read-only Coinbase Advanced / CDP API key details.\n\nOpen the [Coinbase API key page](https://portal.cdp.coinbase.com/access/api).",
         "title": "Reauthenticate Coinbase Advanced"
       }
     }

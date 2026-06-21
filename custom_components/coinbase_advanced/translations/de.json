@@ -2,14 +2,14 @@
   "config": {
     "abort": {
       "already_configured": "Dieses Coinbase-Konto ist bereits konfiguriert.",
-      "wrong_account": "Die neuen Zugangsdaten gehoeren zu einem anderen Coinbase-Konto."
+      "wrong_account": "Die neuen Zugangsdaten gehören zu einem anderen Coinbase-Konto."
     },
     "error": {
       "cannot_connect": "Verbindung zu Coinbase konnte nicht hergestellt werden.",
       "invalid_auth": "Coinbase hat die API-Zugangsdaten abgelehnt.",
       "invalid_auth_key": "Coinbase hat den API-Key abgelehnt.",
       "invalid_auth_secret": "Coinbase hat das API-Secret abgelehnt.",
-      "invalid_key_format": "Das sieht nicht nach einem Coinbase Advanced/CDP API-Key aus. Verwende das Format organizations/<org_id>/apiKeys/<key_id>.",
+      "invalid_key_format": "Das sieht nicht nach einem Coinbase Advanced/CDP API-Key aus. Verwende das Format organizations/ORG_ID/apiKeys/KEY_ID.",
       "unknown": "Unerwarteter Fehler"
     },
     "step": {
@@ -18,7 +18,7 @@
           "api_key": "API-Key",
           "api_token": "API-Secret"
         },
-        "description": "Gib deine Coinbase Advanced / CDP API-Zugangsdaten ein. Verwende einen Read-only-Key; Trading-Berechtigungen werden nicht benoetigt und nicht genutzt.",
+        "description": "Gib deine Coinbase Advanced / CDP API-Zugangsdaten ein. Verwende einen Read-only-Key; Trading-Berechtigungen werden nicht benötigt und nicht genutzt.\n\nÖffne die [Coinbase API-Seite](https://portal.cdp.coinbase.com/access/api).",
         "title": "Coinbase Advanced API"
       },
       "reauth_confirm": {
@@ -26,7 +26,7 @@
           "api_key": "API-Key",
           "api_token": "API-Secret"
         },
-        "description": "Gib neue Read-only-Zugangsdaten fuer Coinbase Advanced / CDP ein.",
+        "description": "Gib neue Read-only-Zugangsdaten für Coinbase Advanced / CDP ein.\n\nÖffne die [Coinbase API-Seite](https://portal.cdp.coinbase.com/access/api).",
         "title": "Coinbase Advanced erneut authentifizieren"
       }
     }
